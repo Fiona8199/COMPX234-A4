@@ -50,4 +50,18 @@ def send_and_receive(client_socket, server_address, message, timeout=1):
 
     data_socket.close()
     client_socket.close()
-    print(f"File {filename} downloaded successfully")
+    print(f"File {filename} downloaded successfully")def main(server_hostname, server_port, files_list):
+    server_address = (server_hostname, server_port)
+    with open(files_list, "r") as f:
+        filenames = [line.strip() for line in f.readlines()]
+
+    for filename in filenames:
+        download_file(server_address, filename)
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 4:
+        print("Usage: python3 UDPclient.py <hostname> <port> <files_list>")
+        sys.exit(1)
+    server_hostname, server_port, files_list = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+    main(server_hostname, server_port, files_list)
