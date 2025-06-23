@@ -41,3 +41,24 @@ def handle_client_request(client_address, filename, client_socket):
         data_socket.close()
     except Exception as e:
         print(f"Error handling client request: {e}")
+
+def main(port):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_socket.bind(("localhost", port))
+    print(f"Server running on port {port}")
+
+    while True:
+        message, client_address = server_socket.recvfrom(1024)
+        message = message.decode()
+        if message.startswith("DOWNLOAD"):
+            _, filename = message.split()
+            client_thread = threading.Thread(target=handle_client_request, args=(client_address, filename, server_socket))
+            client_thread.start()
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 2:
+        print("Usage: python3 UDPserver.py <port>")
+        sys.exit(1)
+    port = int(sys.argv[1])
+    main(port)
