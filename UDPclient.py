@@ -10,4 +10,44 @@ def send_and_receive(client_socket, server_address, message, timeout=1):
         response, _ = client_socket.recvfrom(4096)
         return response.decode()
     except socket.timeout:
-        return None
+        return Nonedef download_file(server_address, filename):
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    request = f"DOWNLOAD {filename}"
+    response = send_and_receive(client_socket, server_address, request)
+
+    if not response:
+        print(f"Failed to get response for {filename}")
+        return
+
+    if response.startswith(f"ERR {filename} NOT_FOUND"):
+        print(f"File {filename} not found on server")
+        return
+
+    _, _, size, port = response.split("SIZE")[1].split()
+    size, port = int(size), int(port)
+    data_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    data_socket.bind(("", 0))
+
+    with open(filename, "wb") as file:
+        start, end = 0, 999
+        while start < size:
+            request = f"FILE {filename} GET START {start} END {end}"
+            response = send_and_receive(data_socket, server_address, request)
+            if not response:
+                print(f"Failed to get data chunk for {filename}")
+                return
+
+            if response.startswith(f"FILE {filename} OK"):
+                _, _, _, _, data = response.split("DATA")
+                decoded_data = base64.b64decode(data)
+                file.write(decoded_data)
+                start += len(decoded_data)
+                end = min(start + 999, size - 1)
+                print(f"Received {len(decoded_data)} bytes")
+
+        close_request = f"FILE {filename} CLOSE"
+        send_and_receive(data_socket, server_address, close_request)
+
+    data_socket.close()
+    client_socket.close()
+    print(f"File {filename} downloaded successfully")
